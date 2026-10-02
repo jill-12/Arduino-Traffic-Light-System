@@ -1,0 +1,112 @@
+WIRING DIAGRAM - Arduino Traffic Light System
+================================================
+
+                     ┌──────────────────────────┐
+                     │      Arduino UNO         │
+                     │                          │
+                     │  Pin 13 ─────┐           │
+                     │              │           │
+                     │  Pin 12 ─────┤           │
+                     │              │           │
+                     │  Pin 11 ─────┤           │
+                     │              │           │
+                     │  Pin 2 ──────┤           │
+                     │              │           │
+                     │  GND ────────┘           │
+                     │                          │
+                     └──────────────────────────┘
+                              │
+          ┌───────────────────┼───────────────────┐
+          │                   │                   │
+          │                   │                   │
+       ┌──┴──┐            ┌──┴──┐            ┌──┴──┐
+       │     │ RED        │     │ YELLOW     │     │ GREEN
+       │ LED │            │ LED │            │ LED │
+       │     │            │     │            │     │
+       └──┬──┘            └──┬──┘            └──┬──┘
+          │                 │                   │
+          │ 220Ω            │ 220Ω              │ 220Ω
+          │ Resistor        │ Resistor          │ Resistor
+          │                 │                   │
+       ┌──┴──┐           ┌──┴──┐            ┌──┴──┐
+       │  +  │           │  +  │            │  +  │
+       └──┬──┘           └──┬──┘            └──┬──┘
+          │                 │                   │
+          └────────┬────────┴───────┬──────────┘
+                   │                │
+              ┌────┴────┐      ┌────┴────┐
+              │  5V Bus │      │  GND Bus│
+              └────┬────┘      └────┬────┘
+                   │                │
+                   └────────┬───────┘
+                            │
+                      [USB Power]
+
+
+PIN CONNECTIONS:
+================
+
+LED Connections:
+- RED LED:    Pin 13 → [220Ω Resistor] → 5V (Anode), GND (Cathode)
+- YELLOW LED: Pin 12 → [220Ω Resistor] → 5V (Anode), GND (Cathode)
+- GREEN LED:  Pin 11 → [220Ω Resistor] → 5V (Anode), GND (Cathode)
+
+Button Connection (for interrupt versions):
+- Button:    Pin 2 → Button → GND (other side)
+             (Pin 2 has internal PULLUP resistor enabled)
+
+Power Connections:
+- 5V:  Powers LED anodes (through resistors)
+- GND: Common ground for everything
+
+
+REAL BREADBOARD WIRING STEPS:
+=============================
+
+1. Place Arduino on breadboard (or next to it)
+
+2. Connect power rails:
+   - Arduino 5V → Breadboard positive rail
+   - Arduino GND → Breadboard negative (ground) rail
+
+3. Connect LEDs:
+   - Insert RED LED: longer leg (anode) to positive rail, shorter leg to empty hole
+   - Insert YELLOW LED: longer leg (anode) to positive rail, shorter leg to empty hole
+   - Insert GREEN LED: longer leg (anode) to positive rail, shorter leg to empty hole
+
+4. Connect resistors (one for each LED):
+   - 220Ω resistor: from each LED's cathode (shorter leg) to separate row
+   - Resistor connections go to Arduino pins:
+     • RED LED resistor row → Pin 13
+     • YELLOW LED resistor row → Pin 12
+     • GREEN LED resistor row → Pin 11
+
+5. Connect button (for interrupt versions only):
+   - One side of button → Pin 2
+   - Other side of button → GND rail
+   - Arduino has internal PULLUP, so no external resistor needed
+
+
+CIRCUIT BEHAVIOR:
+=================
+
+When GPIO pin is HIGH (5V):
+  - Current flows: 5V → Arduino Pin → Resistor → LED anode → LED cathode → GND
+  - LED lights up (current limited by 220Ω resistor)
+
+When GPIO pin is LOW (0V):
+  - No voltage difference → No current → LED off
+
+Resistor calculation:
+  - LED typical voltage drop: 2V
+  - Arduino pin max current: ~40mA (safe: ~20mA)
+  - Resistor: R = (5V - 2V) / 20mA = 150Ω (use 220Ω for safety)
+
+
+TESTING:
+========
+
+1. Upload code to Arduino
+2. LEDs should cycle: GREEN (5s) → YELLOW (2s) → RED (5s) → repeat
+3. For interrupt version: press button to activate emergency blink mode
+4. Open Serial Monitor (9600 baud) to see status messages
