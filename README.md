@@ -1,281 +1,231 @@
-# Arduino Traffic Light System
+# Pedestrian Crossing Traffic Light System
 
-A comprehensive Arduino-based traffic light simulation system with state management, interrupts, and emergency modes. Designed to work with **Wokwi** simulator and real Arduino hardware.
+This project implements a pedestrian crossing control system using an Arduino UNO and an external interrupt. The vehicle traffic light remains GREEN by default. When a pedestrian presses the button, an interrupt triggers a safe pedestrian crossing sequence, after which normal traffic flow resumes.
 
-## 📋 Project Overview
+## Project objective
 
-This project demonstrates:
-- Basic traffic light state cycling (Red → Green → Yellow)
-- System interrupts for emergency mode activation
-- Timer-based interrupts for precise timing control
-- Serial debugging and monitoring
-- Real-world traffic light behavior
+Design and simulate a pedestrian crossing traffic light using Arduino UNO with the following requirements:
 
-## 🔧 Hardware Components (for Wokwi or Physical Setup)
+- Vehicle Green LED -> Pin 11
+- Vehicle Yellow LED -> Pin 10
+- Vehicle Red LED -> Pin 9
+- Pedestrian Green LED -> Pin 8
+- Push button -> Pin 2 (External Interrupt INT0)
+- 220Ω resistors for LEDs
 
-### Components List:
-- Arduino UNO (or Nano, Mega)
-- 3 × LEDs (Red, Yellow, Green)
-- 3 × Resistors (220Ω)
-- 1 × Push Button (for interrupt-based versions)
-- Breadboard
-- Jumper wires
-- USB cable (for programming)
+## Default state
 
-### Pin Configuration:
-```
-Red LED      → Arduino Pin 13
-Yellow LED   → Arduino Pin 12
-Green LED    → Arduino Pin 11
-Button       → Arduino Pin 2 (INT0 - External Interrupt)
-GND          → Ground Rail
-5V           → Power Rail
-```
+- Vehicle Green -> ON
+- Vehicle Yellow -> OFF
+- Vehicle Red -> OFF
+- Pedestrian Green -> OFF
 
-## 🔌 Wiring Diagram
+## Operation sequence
 
-```
-┌─────────────────────────────────────┐
-│         Arduino UNO                 │
-│  ┌──────────────────────────────┐   │
-│  │                              │   │
-│  │  13 ──────[220Ω]──→ RED LED  │   │
-│  │  12 ──────[220Ω]──→ YEL LED  │   │
-│  │  11 ──────[220Ω]──→ GRN LED  │   │
-│  │   2 ──────BUTTON──→ GND      │   │
-│  │ GND ──────────────→ GND Rail │   │
-│  │ 5V  ──────────────→ 5V Rail  │   │
-│  └──────────────────────────────┘   │
-└─────────────────────────────────────┘
+When the push button is pressed:
 
-All LED anodes connect to 5V through resistors.
-All LED cathodes connect to GND.
-```
+1. Vehicle Green -> OFF
+2. Vehicle Yellow -> ON for 2 seconds
+3. Vehicle Yellow -> OFF
+4. Vehicle Red -> ON
+5. Pedestrian Green -> ON for 5 seconds
+6. Pedestrian Green -> OFF
+7. Vehicle Red -> OFF
+8. Vehicle Green -> ON again
 
-## 📁 Project Files
+## Why interrupts are used
 
-1. **basic_traffic_light.ino** - Simple version without interrupts
-2. **traffic_light_with_interrupts.ino** - External interrupt for emergency mode
-3. **traffic_light_timer_interrupt.ino** - Timer-based interrupt version
-4. **diagram.txt** - ASCII wiring diagram
+Interrupts are used because the system must react immediately when the pedestrian presses the button. Using `attachInterrupt()` means the Arduino does not need to keep checking the button constantly in the main loop. This makes the system more responsive and efficient.
 
-## 🚀 Getting Started
+## Hardware connection summary
 
-### Option 1: Using Wokwi (Simulator)
+| Component | Arduino Pin |
+|---|---|
+| Vehicle Green LED | 11 |
+| Vehicle Yellow LED | 10 |
+| Vehicle Red LED | 9 |
+| Pedestrian Green LED | 8 |
+| Button | 2 |
 
-1. Go to **https://wokwi.com**
-2. Click **Create New Project** → Select **Arduino UNO**
-3. Copy code from any `.ino` file in this repository
-4. Paste into Wokwi editor
-5. Add components from the component library:
-   - 3 LEDs (Red, Yellow, Green)
-   - 3 Resistors (220Ω)
-   - 1 Push Button (for interrupt versions)
-6. Wire according to the pin configuration above
-7. Click **Start Simulation** ▶️
+### Wiring notes
 
-### Option 2: Real Arduino Hardware
+- Connect each LED to a 220Ω resistor.
+- Connect the button between Pin 2 and GND.
+- Use the Arduino's internal pull-up resistor (`INPUT_PULLUP`) to simplify the button connection.
+- Keep all grounds connected together.
 
-1. Download **Arduino IDE** from https://www.arduino.cc/en/software
-2. Install it and connect your Arduino via USB
-3. Copy code from `.ino` file
-4. Paste into Arduino IDE
-5. Select **Board** → Arduino UNO
-6. Select **Port** → COM port of your Arduino
-7. Click **Upload** ⬆️
+## Code explanation
 
-## 📝 Code Versions Explained
+### 1. Pin setup
+The code assigns each LED and the button to the required Arduino pins so the hardware matches the design.
 
-### Version 1: Basic Traffic Light (No Interrupts)
-**File:** `basic_traffic_light.ino`
+### 2. `setup()`
+- Configures the LEDs as outputs
+- Configures the button as `INPUT_PULLUP`
+- Attaches the interrupt to Pin 2 using `attachInterrupt()`
+- Calls `setNormalState()` to ensure the default green light is active when the program starts
 
-Simplest implementation with sequential state changes:
-- Green light: 5 seconds
-- Yellow light: 2 seconds
-- Red light: 5 seconds
-- Repeats indefinitely
+### 3. `loop()`
+The main loop checks whether the interrupt flag was set. When the pedestrian button is pressed, the loop runs the pedestrian crossing sequence and then resets the system to normal traffic flow.
 
-**Use case:** Learning basics, simple projects
+### 4. `buttonISR()`
+This is the Interrupt Service Routine (ISR). It fires immediately when the button is pressed. It is kept short and fast to comply with correct interrupt handling practice.
+
+### 5. `handlePedestrianCrossing()`
+This function controls the traffic sequence and safety logic:
+- turns off vehicle green
+- waits 2 seconds while yellow is ON
+- turns yellow OFF
+- turns red ON
+- turns pedestrian green ON for 5 seconds
+- turns pedestrian green OFF
+- turns red OFF
+- turns vehicle green ON again
+
+### 6. `setNormalState()`
+This ensures that when the system is idle, the normal state is:
+- vehicle green ON
+- vehicle yellow OFF
+- vehicle red OFF
+- pedestrian green OFF
+
+## Safety logic
+
+This design is safe because:
+- vehicles are stopped before pedestrians are allowed to cross
+- the yellow warning phase happens before switching to red
+- the pedestrian green light appears only after the vehicle red light is ON
+- the system returns to green only after the crossing is complete
+
+## Wokwi simulation steps
+
+1. Open Wokwi.
+2. Create a new Arduino UNO simulation.
+3. Add:
+   - Arduino UNO
+   - 4 LEDs
+   - 4 × 220Ω resistors
+   - 1 push button
+4. Connect the components according to the pin map above.
+5. Copy the code from `pedestrian_crossing_traffic_light.ino` into the Wokwi editor.
+6. Run the simulation and press the button to trigger the pedestrian crossing sequence.
+
+## Expected output
+
+- Default state: vehicle green ON
+- Button press triggers the interrupt
+- Vehicle green turns OFF
+- Vehicle yellow ON for 2 seconds
+- Vehicle red ON
+- Pedestrian green ON for 5 seconds
+- Return to vehicle green
+
+## Arduino code
 
 ```cpp
-Green → Yellow → Red → repeat
+// Pedestrian Crossing Traffic Light System
+// Arduino UNO
+// Vehicle Green -> Pin 11
+// Vehicle Yellow -> Pin 10
+// Vehicle Red -> Pin 9
+// Pedestrian Green -> Pin 8
+// Push button -> Pin 2 (External Interrupt INT0)
+
+const int VEHICLE_GREEN = 11;
+const int VEHICLE_YELLOW = 10;
+const int VEHICLE_RED = 9;
+const int PEDESTRIAN_GREEN = 8;
+const int BUTTON_PIN = 2;
+
+volatile bool pedestrianRequest = false;
+bool crossingInProgress = false;
+
+void setup() {
+  // Set LED pins as outputs
+  pinMode(VEHICLE_GREEN, OUTPUT);
+  pinMode(VEHICLE_YELLOW, OUTPUT);
+  pinMode(VEHICLE_RED, OUTPUT);
+  pinMode(PEDESTRIAN_GREEN, OUTPUT);
+
+  // Button pin uses internal pull-up resistor
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+
+  // Attach the external interrupt to Pin 2
+  // FALLING means the button goes from HIGH to LOW when pressed
+  attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), buttonISR, FALLING);
+
+  // Start in the normal default state
+  setNormalState();
+}
+
+void loop() {
+  // If the button interrupt set the request flag, start the pedestrian crossing
+  if (pedestrianRequest && !crossingInProgress) {
+    pedestrianRequest = false;
+    handlePedestrianCrossing();
+  }
+
+  // Keep the system in normal operation when no request is active
+  setNormalState();
+}
+
+// Interrupt Service Routine (ISR)
+// This function must be short and fast because it is called immediately by hardware.
+void buttonISR() {
+  pedestrianRequest = true;
+}
+
+void handlePedestrianCrossing() {
+  crossingInProgress = true;
+
+  // Step 1: Vehicle Green -> OFF
+  digitalWrite(VEHICLE_GREEN, LOW);
+
+  // Step 2: Vehicle Yellow -> ON for 2 seconds
+  digitalWrite(VEHICLE_YELLOW, HIGH);
+  delay(2000);
+
+  // Step 3: Vehicle Yellow -> OFF
+  digitalWrite(VEHICLE_YELLOW, LOW);
+
+  // Step 4: Vehicle Red -> ON
+  digitalWrite(VEHICLE_RED, HIGH);
+
+  // Step 5: Pedestrian Green -> ON for 5 seconds
+  digitalWrite(PEDESTRIAN_GREEN, HIGH);
+  delay(5000);
+
+  // Step 6: Pedestrian Green -> OFF
+  digitalWrite(PEDESTRIAN_GREEN, LOW);
+
+  // Step 7: Vehicle Red -> OFF
+  digitalWrite(VEHICLE_RED, LOW);
+
+  // Step 8: Return to normal traffic flow
+  setNormalState();
+
+  crossingInProgress = false;
+}
+
+void setNormalState() {
+  // Default state required by the assignment:
+  // Vehicle Green = ON
+  // Vehicle Yellow = OFF
+  // Vehicle Red = OFF
+  // Pedestrian Green = OFF
+  digitalWrite(VEHICLE_GREEN, HIGH);
+  digitalWrite(VEHICLE_YELLOW, LOW);
+  digitalWrite(VEHICLE_RED, LOW);
+  digitalWrite(PEDESTRIAN_GREEN, LOW);
+}
 ```
 
----
+## Summary
 
-### Version 2: External Interrupt (Emergency Mode)
-**File:** `traffic_light_with_interrupts.ino`
+This project demonstrates understanding of:
+- external interrupts in Arduino
+- synchronization between main code and ISR
+- safe traffic light transitions
+- real-world control logic for pedestrian crossings
 
-Adds emergency functionality via button press:
-- Press button to activate emergency mode
-- All lights blink simultaneously
-- After 10 blinks, returns to normal operation
-- Uses `attachInterrupt()` for real-time response
-
-**Use case:** Emergency vehicles, real-world scenarios
-
-**Key Features:**
-- Non-blocking interrupt handling
-- `volatile` keyword for variable safety
-- `FALLING` edge trigger (button press)
-
----
-
-### Version 3: Timer Interrupt (Precise Timing)
-**File:** `traffic_light_timer_interrupt.ino`
-
-Uses hardware timer for more reliable timing:
-- Timer interrupt every 1 second
-- State machine approach
-- No blocking delays
-- More precise timing control
-
-**Use case:** Production systems, multiple lights, synchronized networks
-
-**Requires:** `TimerOne` library (install via Arduino IDE → Sketch → Include Library → Manage Libraries)
-
-## 🎯 Light Duration Table
-
-| Light | Duration | Real-world Usage |
-|-------|----------|------------------|
-| **Green** | 5 seconds | Allow traffic to proceed |
-| **Yellow** | 2 seconds | Warning to drivers |
-| **Red** | 5 seconds | Stop all traffic |
-| **Emergency Blink** | 2 seconds (all) | Alert mode |
-
-## 📊 State Diagram
-
-```
-        ┌─────────┐
-        │  GREEN  │
-        │ 5 sec   │
-        └────┬────┘
-             │
-             ▼
-        ┌─────────┐
-        │ YELLOW  │
-        │ 2 sec   │
-        └────┬────┘
-             │
-             ▼
-        ┌─────────┐
-        │  RED    │
-        │ 5 sec   │
-        └────┬────┘
-             │
-             └─────→ (repeat)
-```
-
-## 🔴 Serial Monitor Output
-
-When running, the Serial Monitor displays:
-
-```
-Traffic Light System Started
-GREEN - Go!
-YELLOW - Caution!
-RED - Stop!
-GREEN - Go!
-...
-```
-
-**To view in Arduino IDE:**
-1. Tools → Serial Monitor (or Ctrl+Shift+M)
-2. Set baud rate to **9600**
-3. Watch real-time output
-
-## 🛠️ Installation & Setup
-
-### Arduino IDE Setup:
-
-```bash
-# 1. Install Arduino IDE
-# Download from: https://www.arduino.cc/en/software
-
-# 2. For Timer Interrupt version only:
-# In Arduino IDE:
-# Sketch → Include Library → Manage Libraries
-# Search: "TimerOne"
-# Install by Jesse Tane
-
-# 3. Connect Arduino via USB
-# Select board and port
-# Upload the sketch
-```
-
-## 🚨 Interrupt Concepts
-
-### External Interrupt (Pin 2/3)
-```cpp
-attachInterrupt(digitalPinToInterrupt(2), functionName, FALLING);
-```
-- Triggers when button pressed (FALLING = HIGH to LOW)
-- Immediately calls `functionName()`
-- Use `volatile` for shared variables
-- Keep ISR functions short and fast
-
-### Timer Interrupt
-```cpp
-Timer1.initialize(1000000);  // 1 second
-Timer1.attachInterrupt(functionName);
-```
-- Calls function at fixed intervals
-- Better for timing-critical tasks
-- More reliable than `delay()`
-- Requires TimerOne library
-
-## 💡 Tips & Best Practices
-
-✅ **Do:**
-- Use `volatile` for variables changed in ISR
-- Keep interrupt functions short
-- Use timer interrupts for precise timing
-- Test with Serial output for debugging
-
-❌ **Don't:**
-- Use `delay()` inside interrupt functions
-- Call Serial.print() in timer interrupts (can cause issues)
-- Forget to declare `volatile` for shared variables
-
-## 📚 Learning Resources
-
-- [Arduino Interrupts Tutorial](https://www.arduino.cc/reference/en/language/functions/external-interrupts/attachinterrupt/)
-- [Wokwi Simulator](https://wokwi.com)
-- [Arduino Pin Mapping](https://www.arduino.cc/en/Reference/AttachInterrupt)
-- [Timer Interrupt Library](https://github.com/PaulStoffregen/TimerOne)
-
-## 🔍 Troubleshooting
-
-| Problem | Solution |
-|---------|----------|
-| LEDs not lighting | Check resistor connections, verify pin numbers |
-| Button not working | Confirm pin 2, check pullup resistor |
-| Serial not showing | Set baud rate to 9600 in Serial Monitor |
-| Upload fails | Verify COM port and board selection |
-| Timing inaccurate | Use timer interrupt version instead of delays |
-
-## 📞 Support
-
-For issues or questions:
-1. Check the troubleshooting section
-2. Review the comments in the `.ino` files
-3. Test on Wokwi first before real hardware
-
-## 📄 License
-
-Open source - Feel free to modify and use for educational purposes.
-
-## 🎓 Educational Value
-
-This project teaches:
-- Arduino programming basics
-- Digital I/O (input/output)
-- Interrupts and ISR (Interrupt Service Routines)
-- Timer-based programming
-- State machines
-- Serial communication
-- Circuit design and breadboarding
-
----
-
-**Happy coding! 🚦**
+It has been designed to meet the assignment requirements for a pedestrian crossing traffic light and can be simulated successfully in Wokwi.
